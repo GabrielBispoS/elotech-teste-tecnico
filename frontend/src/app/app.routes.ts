@@ -12,6 +12,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/projects/projects').then((m) => m.Projects),
   },
+  {
+    path: 'projects/:projectId',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/board/board').then((m) => m.Board),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'projects' },
   { path: '**', redirectTo: 'projects' },
 ];

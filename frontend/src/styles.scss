@@ -13,3 +13,10 @@ body {
   margin: 0 auto;
   padding: 16px;
 }
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 320px;
+}

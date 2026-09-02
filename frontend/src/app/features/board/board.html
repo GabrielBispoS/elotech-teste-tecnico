@@ -1,0 +1,65 @@
+<app-toolbar [title]="project()?.name || 'Board'" />
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<div class="page">
+  <div class="board-header">
+    <a mat-button [routerLink]="['/projects']">
+      <mat-icon>arrow_back</mat-icon>
+      Projetos
+    </a>
+
+    <span class="board-header-spacer"></span>
+
+    @if (project(); as current) {
+      <mat-chip-set>
+        <mat-chip>{{ current.myRole }}</mat-chip>
+        <mat-chip>{{ current.members.length }} membros</mat-chip>
+      </mat-chip-set>
+    }
+
+    @if (isAdmin()) {
+      <button mat-stroked-button type="button" (click)="openMemberDialog()">
+        <mat-icon>person_add</mat-icon>
+        Membro
+      </button>
+    }
+  </div>
+
+  <div class="board" cdkDropListGroup>
+    @for (column of columns; track column.status) {
+      <section class="board-column">
+        <header class="board-column-header">
+          <h3>{{ column.label }}</h3>
+          <span class="board-column-count">{{ tasksOf(column.status).length }}</span>
+        </header>
+
+        <div
+          class="board-column-list"
+          cdkDropList
+          [cdkDropListData]="column.status"
+          (cdkDropListDropped)="drop($event, column.status)"
+        >
+          @for (task of tasksOf(column.status); track task.id) {
+            <mat-card class="task-card" cdkDrag [cdkDragData]="task">
+              <mat-card-content>
+                <p class="task-title">{{ task.title }}</p>
+                <div class="task-meta">
+                  <span class="priority priority-{{ task.priority }}">{{ task.priority }}</span>
+                  @if (task.deadline) {
+                    <span class="deadline">{{ task.deadline }}</span>
+                  }
+                </div>
+                <p class="task-assignee">{{ task.assignee?.name || 'Sem responsavel' }}</p>
+              </mat-card-content>
+            </mat-card>
+          } @empty {
+            <p class="board-column-empty">Nenhuma tarefa.</p>
+          }
+        </div>
+      </section>
+    }
+  </div>
+</div>
