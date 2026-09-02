@@ -1,0 +1,10 @@
+<mat-toolbar color="primary">
+  <span class="toolbar-title">{{ title() }}</span>
+  <span class="toolbar-spacer"></span>
+  @if (currentUser(); as user) {
+    <span class="toolbar-user">{{ user.name }}</span>
+  }
+  <button mat-icon-button type="button" aria-label="Sair" (click)="logout()">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>

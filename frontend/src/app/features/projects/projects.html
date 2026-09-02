@@ -1,0 +1,40 @@
+<app-toolbar title="Projetos" />
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<div class="page">
+  <div class="projects-header">
+    <h2>Meus projetos</h2>
+    <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+      <mat-icon>add</mat-icon>
+      Novo projeto
+    </button>
+  </div>
+
+  @if (!loading() && projects().length === 0) {
+    <p class="empty">Voce ainda nao participa de nenhum projeto.</p>
+  }
+
+  <div class="projects-grid">
+    @for (project of projects(); track project.id) {
+      <mat-card class="project-card">
+        <mat-card-header>
+          <mat-card-title>{{ project.name }}</mat-card-title>
+          <mat-card-subtitle>
+            <mat-chip-set>
+              <mat-chip>{{ project.myRole }}</mat-chip>
+            </mat-chip-set>
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ project.description || 'Sem descricao.' }}</p>
+        </mat-card-content>
+        <mat-card-actions>
+          <a mat-button color="primary" [routerLink]="['/projects', project.id]">Abrir board</a>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+</div>
