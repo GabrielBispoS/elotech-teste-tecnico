@@ -5,9 +5,12 @@ import com.elotech.taskmanager.common.exception.ResourceNotFoundException;
 import com.elotech.taskmanager.project.ProjectAccessService;
 import com.elotech.taskmanager.project.ProjectMembershipRepository;
 import com.elotech.taskmanager.project.domain.Project;
+import com.elotech.taskmanager.project.domain.ProjectRole;
 import com.elotech.taskmanager.task.domain.Task;
+import com.elotech.taskmanager.task.domain.TaskStatus;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
+import com.elotech.taskmanager.task.dto.TaskStatusUpdateRequest;
 import com.elotech.taskmanager.user.UserRepository;
 import com.elotech.taskmanager.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class TaskService {
+
+    private static final int WIP_LIMIT = 5;
 
     private final TaskRepository taskRepository;
     private final ProjectAccessService accessService;
@@ -57,9 +62,34 @@ public class TaskService {
     }
 
     @Transactional
+    public TaskResponse changeStatus(Long taskId, TaskStatusUpdateRequest request, Long actorId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa nao encontrada: " + taskId));
+        ProjectRole actorRole = accessService.roleOf(task.getProject().getId(), actorId);
+
+        if (request.status() == TaskStatus.IN_PROGRESS && task.getStatus() != TaskStatus.IN_PROGRESS) {
+            requireWipCapacity(task.getAssignee());
+        }
+        task.changeStatus(request.status(), actorRole);
+        return TaskResponse.from(task);
+    }
+
+    @Transactional
     public void delete(Long projectId, Long taskId, Long actorId) {
         accessService.requireMember(projectId, actorId);
         taskRepository.delete(findTaskInProject(projectId, taskId));
+    }
+
+    // WIP limit: no maximo 5 tarefas em andamento por responsavel, contadas no banco
+    private void requireWipCapacity(User assignee) {
+        if (assignee == null) {
+            return;
+        }
+        long inProgress = taskRepository.countByAssigneeIdAndStatus(assignee.getId(), TaskStatus.IN_PROGRESS);
+        if (inProgress >= WIP_LIMIT) {
+            throw new BusinessRuleException("Limite de %d tarefas em andamento atingido para %s"
+                    .formatted(WIP_LIMIT, assignee.getName()));
+        }
     }
 
     private Task findTaskInProject(Long projectId, Long taskId) {

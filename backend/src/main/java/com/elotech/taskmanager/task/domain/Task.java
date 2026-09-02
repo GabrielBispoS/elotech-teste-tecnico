@@ -1,6 +1,9 @@
 package com.elotech.taskmanager.task.domain;
 
+import com.elotech.taskmanager.common.exception.BusinessRuleException;
+import com.elotech.taskmanager.common.exception.ForbiddenOperationException;
 import com.elotech.taskmanager.project.domain.Project;
+import com.elotech.taskmanager.project.domain.ProjectRole;
 import com.elotech.taskmanager.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -76,5 +79,29 @@ public class Task {
         this.priority = priority;
         this.deadline = deadline;
         this.assignee = assignee;
+    }
+
+    /**
+     * Maquina de estados da tarefa. A matriz completa esta documentada no README.
+     */
+    public void changeStatus(TaskStatus novoStatus, ProjectRole papelDoAtor) {
+        if (!isTransicaoPermitida(novoStatus)) {
+            throw new BusinessRuleException(
+                    "Transicao de status invalida: " + status + " -> " + novoStatus);
+        }
+        if (novoStatus == TaskStatus.DONE && priority == TaskPriority.CRITICAL
+                && papelDoAtor != ProjectRole.ADMIN) {
+            throw new ForbiddenOperationException(
+                    "Somente ADMIN do projeto pode concluir uma tarefa CRITICAL");
+        }
+        this.status = novoStatus;
+    }
+
+    private boolean isTransicaoPermitida(TaskStatus novoStatus) {
+        return switch (status) {
+            case TODO -> novoStatus == TaskStatus.IN_PROGRESS;
+            case IN_PROGRESS -> novoStatus == TaskStatus.DONE || novoStatus == TaskStatus.TODO;
+            case DONE -> novoStatus == TaskStatus.IN_PROGRESS;
+        };
     }
 }
