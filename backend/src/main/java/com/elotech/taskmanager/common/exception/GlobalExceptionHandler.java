@@ -4,12 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -57,6 +59,13 @@ public class GlobalExceptionHandler {
         log.warn("Corpo de requisicao invalido: {}", e.getMessage());
         return problem(HttpStatus.BAD_REQUEST, "Requisicao invalida",
                 "Corpo da requisicao malformado ou com valor de enum desconhecido");
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, PropertyReferenceException.class})
+    ProblemDetail handleInvalidParameter(Exception e) {
+        log.warn("Parametro de requisicao invalido: {}", e.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, "Requisicao invalida",
+                "Parametro de filtro ou ordenacao invalido");
     }
 
     // ultimo recurso: nunca expor stack trace ou detalhe interno ao cliente

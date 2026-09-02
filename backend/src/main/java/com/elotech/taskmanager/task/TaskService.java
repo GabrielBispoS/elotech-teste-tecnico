@@ -1,5 +1,6 @@
 package com.elotech.taskmanager.task;
 
+import com.elotech.taskmanager.common.dto.PageResponse;
 import com.elotech.taskmanager.common.exception.BusinessRuleException;
 import com.elotech.taskmanager.common.exception.ResourceNotFoundException;
 import com.elotech.taskmanager.project.ProjectAccessService;
@@ -8,16 +9,16 @@ import com.elotech.taskmanager.project.domain.Project;
 import com.elotech.taskmanager.project.domain.ProjectRole;
 import com.elotech.taskmanager.task.domain.Task;
 import com.elotech.taskmanager.task.domain.TaskStatus;
+import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
 import com.elotech.taskmanager.task.dto.TaskStatusUpdateRequest;
 import com.elotech.taskmanager.user.UserRepository;
 import com.elotech.taskmanager.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,11 +32,12 @@ public class TaskService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public List<TaskResponse> listByProject(Long projectId, Long actorId) {
+    public PageResponse<TaskResponse> listByProject(Long projectId, TaskFilter filter, Pageable pageable,
+                                                    Long actorId) {
         accessService.requireMember(projectId, actorId);
-        return taskRepository.findByProjectIdOrderByIdDesc(projectId).stream()
-                .map(TaskResponse::from)
-                .toList();
+        return PageResponse.from(
+                taskRepository.findAll(TaskSpecifications.build(projectId, filter), pageable),
+                TaskResponse::from);
     }
 
     @Transactional
