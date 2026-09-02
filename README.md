@@ -42,11 +42,27 @@ Em produção, `JWT_SECRET` deve ser sobrescrito.
 
 ### Frontend
 
+Pré-requisito: Node 20+ (desenvolvido com Node 24). O backend precisa estar no ar.
+
 ```bash
 cd frontend
 npm install
 npm start   # http://localhost:4200
 ```
+
+O `ng serve` usa `proxy.conf.json` para encaminhar `/api` para `http://localhost:8080`, então não há
+URL de backend hard-coded no código nem CORS em desenvolvimento.
+
+- Testes de componente: `npm test -- --watch=false --browsers=ChromeHeadless`
+- Build de produção: `npm run build`
+
+**Telas**
+
+| Rota | Tela |
+|---|---|
+| `/login` | autenticação; guarda `authGuard` protege as demais |
+| `/projects` | projetos em que o usuário é membro, com criação de projeto |
+| `/projects/:projectId` | board kanban com drag and drop, criação/edição de tarefa e gestão de membros |
 
 ---
 
@@ -62,9 +78,10 @@ npm start   # http://localhost:4200
 - JUnit 5 + Mockito + AssertJ; Testcontainers PostgreSQL
 
 **Frontend**
-- Angular 17+ standalone components, signals para estado
-- Angular CDK (drag and drop), Angular Material
-- HTTP interceptor para o JWT
+- Angular 20.3 (standalone components, signals para estado, rotas com lazy loading)
+- Angular Material / CDK 20.2 (drag and drop no board)
+- HTTP interceptor funcional para o JWT
+- Karma + Jasmine
 
 ---
 
@@ -143,7 +160,25 @@ PostgreSQL. A classe é anotada com `@Testcontainers(disabledWithoutDocker = tru
 o teste é pulado em vez de quebrar o build.
 
 **Signals no frontend, não NgRx.** Estado nativo do Angular, sem actions/reducers/effects para três telas.
-NgRx só se paga quando há muitos consumidores do mesmo estado e necessidade de time-travel/devtools.
+O estado do board é um `signal<Task[]>` e as colunas derivam dele — mover um card é uma atualização
+imutável desse array. NgRx só se paga quando há muitos consumidores do mesmo estado e necessidade de
+time-travel/devtools; aqui seria mais boilerplate do que benefício.
+
+**Drag and drop otimista com rollback.** Soltar um card aplica a mudança na UI imediatamente e dispara o
+`PATCH /status`. Se o backend recusar (transição inválida, WIP limit ou trava de CRITICAL), o estado
+anterior é restaurado e a mensagem do `ProblemDetail` aparece no snackbar — o usuário lê a regra que
+barrou a ação, não um erro genérico. As regras vivem só no backend; o frontend não as duplica.
+
+**Componentes standalone e rotas com lazy loading.** Sem `NgModule`; cada rota carrega seu componente sob
+demanda. Os parâmetros de rota chegam como `input()` graças a `withComponentInputBinding()`.
+
+**JWT no `localStorage`.** É o caminho pragmático para uma SPA que fala com uma API stateless, ao custo de
+ficar exposto a XSS. A alternativa mais segura seria cookie `HttpOnly` + `SameSite`, que exigiria CSRF
+token e mudaria o desenho de autenticação do backend — fora do escopo deste desafio.
+
+**Input `type="date"` nativo em vez de `MatDatepicker`.** O backend recebe `LocalDate` no formato ISO, que
+é exatamente o que o input nativo produz. Usar o datepicker do Material significaria adicionar um date
+adapter e converter `Date` ↔ string nos dois sentidos, sem ganho funcional.
 
 ---
 
@@ -207,6 +242,10 @@ confere o relatório e a busca textual. Um segundo teste cobre 403 para não-mem
 Não foram escritos testes de controller isolados (`@WebMvcTest`): o teste de integração já exercita
 serialização, validação, filtros de segurança e status codes com muito mais fidelidade.
 
+**Frontend:** `login.spec.ts` cobre o componente de login pelo DOM — formulário inválido não chama o
+serviço, sucesso navega para `/projects`, e credenciais recusadas exibem mensagem genérica (sem revelar
+qual campo falhou).
+
 ---
 
 ## Endpoints
@@ -245,3 +284,5 @@ serialização, validação, filtros de segurança e status codes com muito mais
 - **Observabilidade**: Actuator, métricas no Micrometer/Prometheus e tracing distribuído, além de logs
   estruturados em JSON com correlation id por requisição.
 - **Paginação por cursor** na listagem de tarefas, se as listas crescerem a ponto de o `offset` doer.
+- **No frontend**: filtros e busca na tela do board (a API já suporta), histórico de auditoria da tarefa
+  no dialog de edição, e testes de componente do board cobrindo o rollback do drag and drop.
