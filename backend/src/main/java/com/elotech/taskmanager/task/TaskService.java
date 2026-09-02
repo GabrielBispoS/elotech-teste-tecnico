@@ -11,9 +11,11 @@ import com.elotech.taskmanager.task.domain.Task;
 import com.elotech.taskmanager.task.domain.TaskPriority;
 import com.elotech.taskmanager.task.domain.TaskStatus;
 import com.elotech.taskmanager.task.dto.ProjectReportResponse;
+import com.elotech.taskmanager.task.dto.TaskAuditLogResponse;
 import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
+import com.elotech.taskmanager.task.dto.TaskSnapshot;
 import com.elotech.taskmanager.task.dto.TaskStatusUpdateRequest;
 import com.elotech.taskmanager.user.UserRepository;
 import com.elotech.taskmanager.user.domain.User;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -33,6 +36,8 @@ public class TaskService {
     private static final int WIP_LIMIT = 5;
 
     private final TaskRepository taskRepository;
+    private final TaskAuditLogRepository auditLogRepository;
+    private final TaskAuditService auditService;
     private final ProjectAccessService accessService;
     private final ProjectMembershipRepository membershipRepository;
     private final UserRepository userRepository;
@@ -85,13 +90,25 @@ public class TaskService {
     public TaskResponse update(Long projectId, Long taskId, TaskRequest request, Long actorId) {
         accessService.requireMember(projectId, actorId);
         Task task = findTaskInProject(projectId, taskId);
+        TaskSnapshot before = TaskSnapshot.of(task);
 
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setPriority(request.priority());
         task.setDeadline(request.deadline());
         task.setAssignee(resolveAssignee(projectId, request.assigneeId()));
+
+        auditService.recordChanges(task, actorId, before);
         return TaskResponse.from(task);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskAuditLogResponse> auditLog(Long projectId, Long taskId, Long actorId) {
+        accessService.requireMember(projectId, actorId);
+        findTaskInProject(projectId, taskId);
+        return auditLogRepository.findByTaskIdOrderByChangedAtDesc(taskId).stream()
+                .map(TaskAuditLogResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -103,7 +120,10 @@ public class TaskService {
         if (request.status() == TaskStatus.IN_PROGRESS && task.getStatus() != TaskStatus.IN_PROGRESS) {
             requireWipCapacity(task.getAssignee());
         }
+        TaskSnapshot before = TaskSnapshot.of(task);
         task.changeStatus(request.status(), actorRole);
+
+        auditService.recordChanges(task, actorId, before);
         return TaskResponse.from(task);
     }
 

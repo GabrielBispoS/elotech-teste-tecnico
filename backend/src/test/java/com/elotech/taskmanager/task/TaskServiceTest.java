@@ -10,6 +10,7 @@ import com.elotech.taskmanager.task.domain.Task;
 import com.elotech.taskmanager.task.domain.TaskPriority;
 import com.elotech.taskmanager.task.domain.TaskStatus;
 import com.elotech.taskmanager.task.dto.TaskRequest;
+import com.elotech.taskmanager.task.dto.TaskSnapshot;
 import com.elotech.taskmanager.task.dto.TaskStatusUpdateRequest;
 import com.elotech.taskmanager.user.UserRepository;
 import com.elotech.taskmanager.user.domain.User;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,10 @@ class TaskServiceTest {
 
     @Mock
     private TaskRepository taskRepository;
+    @Mock
+    private TaskAuditLogRepository auditLogRepository;
+    @Mock
+    private TaskAuditService auditService;
     @Mock
     private ProjectAccessService accessService;
     @Mock
@@ -69,6 +75,7 @@ class TaskServiceTest {
         taskService.changeStatus(TASK_ID, new TaskStatusUpdateRequest(TaskStatus.IN_PROGRESS), ACTOR_ID);
 
         assertThat(task.getStatus()).isEqualTo(TaskStatus.IN_PROGRESS);
+        verify(auditService).recordChanges(eq(task), eq(ACTOR_ID), any(TaskSnapshot.class));
     }
 
     @Test

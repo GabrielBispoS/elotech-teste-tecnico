@@ -4,6 +4,7 @@ import com.elotech.taskmanager.common.dto.PageResponse;
 import com.elotech.taskmanager.common.security.AuthenticatedUser;
 import com.elotech.taskmanager.task.domain.TaskPriority;
 import com.elotech.taskmanager.task.domain.TaskStatus;
+import com.elotech.taskmanager.task.dto.TaskAuditLogResponse;
 import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/tasks")
@@ -63,6 +65,13 @@ public class TaskController {
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal AuthenticatedUser actor) {
         return taskService.search(projectId, q, pageable, actor.id());
+    }
+
+    @Operation(summary = "Historico de alteracoes da tarefa")
+    @GetMapping("/{taskId}/audit")
+    public List<TaskAuditLogResponse> auditLog(@PathVariable Long projectId, @PathVariable Long taskId,
+                                               @AuthenticationPrincipal AuthenticatedUser actor) {
+        return taskService.auditLog(projectId, taskId, actor.id());
     }
 
     @PostMapping
