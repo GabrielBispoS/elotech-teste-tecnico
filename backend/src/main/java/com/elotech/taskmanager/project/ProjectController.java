@@ -6,6 +6,8 @@ import com.elotech.taskmanager.project.dto.MemberResponse;
 import com.elotech.taskmanager.project.dto.ProjectDetailResponse;
 import com.elotech.taskmanager.project.dto.ProjectRequest;
 import com.elotech.taskmanager.project.dto.ProjectResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,21 +27,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/projects")
 @RequiredArgsConstructor
+@Tag(name = "Projetos")
 public class ProjectController {
 
     private final ProjectService projectService;
 
+    @Operation(summary = "Lista os projetos dos quais o usuario e membro")
     @GetMapping
     public List<ProjectResponse> list(@AuthenticationPrincipal AuthenticatedUser actor) {
         return projectService.listMyProjects(actor.id());
     }
 
+    @Operation(summary = "Detalha um projeto e seus membros")
     @GetMapping("/{projectId}")
     public ProjectDetailResponse findById(@PathVariable Long projectId,
                                           @AuthenticationPrincipal AuthenticatedUser actor) {
         return projectService.findById(projectId, actor.id());
     }
 
+    @Operation(summary = "Cria um projeto; o autor entra como ADMIN")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProjectResponse create(@Valid @RequestBody ProjectRequest request,
@@ -60,6 +66,7 @@ public class ProjectController {
         projectService.delete(projectId, actor.id());
     }
 
+    @Operation(summary = "Adiciona um membro ao projeto (somente ADMIN)")
     @PostMapping("/{projectId}/members")
     @ResponseStatus(HttpStatus.CREATED)
     public MemberResponse addMember(@PathVariable Long projectId,
@@ -68,6 +75,7 @@ public class ProjectController {
         return projectService.addMember(projectId, request, actor.id());
     }
 
+    @Operation(summary = "Remove um membro do projeto (somente ADMIN)")
     @DeleteMapping("/{projectId}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeMember(@PathVariable Long projectId, @PathVariable Long userId,

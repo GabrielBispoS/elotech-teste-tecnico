@@ -7,6 +7,8 @@ import com.elotech.taskmanager.task.domain.TaskStatus;
 import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -33,10 +35,12 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api/projects/{projectId}/tasks")
 @RequiredArgsConstructor
+@Tag(name = "Tarefas")
 public class TaskController {
 
     private final TaskService taskService;
 
+    @Operation(summary = "Lista tarefas do projeto com filtros, ordenacao e paginacao")
     @GetMapping
     public PageResponse<TaskResponse> list(
             @PathVariable Long projectId,
@@ -51,6 +55,7 @@ public class TaskController {
         return taskService.listByProject(projectId, filter, pageable, actor.id());
     }
 
+    @Operation(summary = "Busca tarefas por texto no titulo ou na descricao")
     @GetMapping("/search")
     public PageResponse<TaskResponse> search(
             @PathVariable Long projectId,
