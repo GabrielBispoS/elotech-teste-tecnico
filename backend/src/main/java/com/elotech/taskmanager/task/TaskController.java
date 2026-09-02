@@ -8,6 +8,8 @@ import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -47,6 +49,15 @@ public class TaskController {
             @AuthenticationPrincipal AuthenticatedUser actor) {
         TaskFilter filter = new TaskFilter(status, priority, assignee, from, to);
         return taskService.listByProject(projectId, filter, pageable, actor.id());
+    }
+
+    @GetMapping("/search")
+    public PageResponse<TaskResponse> search(
+            @PathVariable Long projectId,
+            @RequestParam @NotBlank @Size(max = 255) String q,
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal AuthenticatedUser actor) {
+        return taskService.search(projectId, q, pageable, actor.id());
     }
 
     @PostMapping

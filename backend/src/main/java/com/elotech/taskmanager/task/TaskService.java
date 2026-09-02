@@ -40,6 +40,13 @@ public class TaskService {
                 TaskResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TaskResponse> search(Long projectId, String term, Pageable pageable, Long actorId) {
+        accessService.requireMember(projectId, actorId);
+        String pattern = "%" + term.trim() + "%";
+        return PageResponse.from(taskRepository.search(projectId, pattern, pageable), TaskResponse::from);
+    }
+
     @Transactional
     public TaskResponse create(Long projectId, TaskRequest request, Long actorId) {
         Project project = accessService.requireMember(projectId, actorId);
