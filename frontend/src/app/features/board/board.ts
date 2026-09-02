@@ -9,12 +9,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 
+import { AuthService } from '../../core/auth-service';
 import { describeError } from '../../core/http-error';
-import { ProjectDetail, Task, TaskStatus } from '../../core/models';
+import { ProjectDetail, Task, TaskPayload, TaskStatus } from '../../core/models';
 import { ProjectService } from '../../core/project-service';
 import { TaskService } from '../../core/task-service';
 import { Toolbar } from '../../shared/toolbar/toolbar';
 import { MemberDialog } from './member-dialog';
+import { TaskDialog, TaskDialogResult } from './task-dialog';
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'TODO', label: 'A fazer' },
@@ -43,6 +45,7 @@ export class Board implements OnInit {
   private readonly taskService = inject(TaskService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly auth = inject(AuthService);
 
   readonly projectId = input.required({ transform: Number });
 
@@ -83,6 +86,24 @@ export class Board implements OnInit {
     });
   }
 
+  protected openTaskDialog(task: Task | null): void {
+    this.dialog
+      .open(TaskDialog, { width: '480px', data: { task, members: this.project()?.members ?? [] } })
+      .afterClosed()
+      .subscribe((result?: TaskDialogResult) => {
+        if (!result) {
+          return;
+        }
+        if (result.action === 'delete' && task) {
+          this.deleteTask(task);
+          return;
+        }
+        if (result.action === 'save') {
+          this.saveTask(task, result.payload);
+        }
+      });
+  }
+
   protected openMemberDialog(): void {
     this.dialog
       .open(MemberDialog, { width: '420px' })
@@ -102,6 +123,45 @@ export class Board implements OnInit {
             }),
         });
       });
+  }
+
+  private saveTask(task: Task | null, payload: TaskPayload): void {
+    const request = task
+      ? this.taskService.update(this.projectId(), task.id, payload)
+      : this.taskService.create(this.projectId(), payload);
+
+    request.subscribe({
+      next: (saved) => {
+        if (task) {
+          this.replaceTask(saved);
+        } else {
+          this.tasks.update((current) => [saved, ...current]);
+        }
+        this.notifyIfAssignedToMe(saved, task?.assignee?.id ?? null);
+      },
+      error: (error) =>
+        this.snackBar.open(describeError(error, 'Nao foi possivel salvar a tarefa.'), 'Fechar', {
+          duration: 5000,
+        }),
+    });
+  }
+
+  private deleteTask(task: Task): void {
+    this.taskService.remove(this.projectId(), task.id).subscribe({
+      next: () => this.tasks.update((current) => current.filter((item) => item.id !== task.id)),
+      error: (error) =>
+        this.snackBar.open(describeError(error, 'Nao foi possivel excluir a tarefa.'), 'Fechar', {
+          duration: 5000,
+        }),
+    });
+  }
+
+  /** Avisa o usuario logado quando a tarefa passa a ser dele. */
+  private notifyIfAssignedToMe(task: Task, previousAssigneeId: number | null): void {
+    const myId = this.auth.currentUser()?.id;
+    if (task.assignee?.id === myId && previousAssigneeId !== myId) {
+      this.snackBar.open(`"${task.title}" foi atribuida a voce.`, 'Fechar', { duration: 5000 });
+    }
   }
 
   protected replaceTask(updated: Task): void {

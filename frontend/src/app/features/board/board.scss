@@ -55,6 +55,13 @@
   cursor: grab;
 }
 
+.task-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
 .task-title {
   margin: 0 0 8px;
   font-weight: 500;

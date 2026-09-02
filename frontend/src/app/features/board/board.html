@@ -26,6 +26,11 @@
         Membro
       </button>
     }
+
+    <button mat-flat-button color="primary" type="button" (click)="openTaskDialog(null)">
+      <mat-icon>add</mat-icon>
+      Nova tarefa
+    </button>
   </div>
 
   <div class="board" cdkDropListGroup>
@@ -45,7 +50,17 @@
           @for (task of tasksOf(column.status); track task.id) {
             <mat-card class="task-card" cdkDrag [cdkDragData]="task">
               <mat-card-content>
-                <p class="task-title">{{ task.title }}</p>
+                <div class="task-card-top">
+                  <p class="task-title">{{ task.title }}</p>
+                  <button
+                    mat-icon-button
+                    type="button"
+                    aria-label="Editar tarefa"
+                    (click)="openTaskDialog(task)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </div>
                 <div class="task-meta">
                   <span class="priority priority-{{ task.priority }}">{{ task.priority }}</span>
                   @if (task.deadline) {

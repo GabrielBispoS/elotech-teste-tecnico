@@ -1,0 +1,49 @@
+<h2 mat-dialog-title>{{ isEditing ? 'Editar tarefa' : 'Nova tarefa' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="dialog-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Titulo</mat-label>
+      <input matInput formControlName="title" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descricao</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Prioridade</mat-label>
+      <mat-select formControlName="priority">
+        @for (priority of priorities; track priority) {
+          <mat-option [value]="priority">{{ priority }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Prazo</mat-label>
+      <input matInput type="date" formControlName="deadline" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Responsavel</mat-label>
+      <mat-select formControlName="assigneeId">
+        <mat-option [value]="null">Sem responsavel</mat-option>
+        @for (member of data.members; track member.userId) {
+          <mat-option [value]="member.userId">{{ member.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (isEditing) {
+    <button mat-button color="warn" type="button" (click)="remove()">Excluir</button>
+  }
+  <button mat-button type="button" mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="primary" type="button" [disabled]="form.invalid" (click)="submit()">
+    Salvar
+  </button>
+</mat-dialog-actions>
