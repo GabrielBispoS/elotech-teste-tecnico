@@ -8,7 +8,9 @@ import com.elotech.taskmanager.project.ProjectMembershipRepository;
 import com.elotech.taskmanager.project.domain.Project;
 import com.elotech.taskmanager.project.domain.ProjectRole;
 import com.elotech.taskmanager.task.domain.Task;
+import com.elotech.taskmanager.task.domain.TaskPriority;
 import com.elotech.taskmanager.task.domain.TaskStatus;
+import com.elotech.taskmanager.task.dto.ProjectReportResponse;
 import com.elotech.taskmanager.task.dto.TaskFilter;
 import com.elotech.taskmanager.task.dto.TaskRequest;
 import com.elotech.taskmanager.task.dto.TaskResponse;
@@ -19,6 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +51,24 @@ public class TaskService {
         accessService.requireMember(projectId, actorId);
         String pattern = "%" + term.trim() + "%";
         return PageResponse.from(taskRepository.search(projectId, pattern, pageable), TaskResponse::from);
+    }
+
+    /** Agregacao feita no banco com GROUP BY; enums sem tarefas aparecem com zero. */
+    @Transactional(readOnly = true)
+    public ProjectReportResponse report(Long projectId, Long actorId) {
+        accessService.requireMember(projectId, actorId);
+
+        Map<TaskStatus, Long> byStatus = new EnumMap<>(TaskStatus.class);
+        Stream.of(TaskStatus.values()).forEach(status -> byStatus.put(status, 0L));
+        taskRepository.countGroupedByStatus(projectId)
+                .forEach(row -> byStatus.put(row.status(), row.total()));
+
+        Map<TaskPriority, Long> byPriority = new EnumMap<>(TaskPriority.class);
+        Stream.of(TaskPriority.values()).forEach(priority -> byPriority.put(priority, 0L));
+        taskRepository.countGroupedByPriority(projectId)
+                .forEach(row -> byPriority.put(row.priority(), row.total()));
+
+        return new ProjectReportResponse(byStatus, byPriority);
     }
 
     @Transactional
