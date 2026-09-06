@@ -14,12 +14,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -90,6 +92,41 @@ class TaskFlowIntegrationTest {
                         .header("Authorization", bearer(adminToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
+
+        // ordenacao por prioridade segue a ordem do negocio, nao a alfabetica do enum
+        mockMvc.perform(get("/api/projects/{id}/tasks", projectId)
+                        .param("sort", "priority,desc")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].priority").value("CRITICAL"))
+                .andExpect(jsonPath("$.content[1].priority").value("MEDIUM"));
+
+        // WIP limit tambem barra a troca de responsavel de uma tarefa ja em andamento
+        long semResponsavel = createTask(adminToken, projectId, "Sem responsavel", "LOW", null);
+        changeStatus(adminToken, semResponsavel, "IN_PROGRESS").andExpect(status().isOk());
+        updateTask(adminToken, projectId, semResponsavel, "Sem responsavel", "LOW", memberId)
+                .andExpect(status().isConflict());
+
+        // prazo e obrigatorio e limitado a um ano a partir de hoje
+        mockMvc.perform(post("/api/projects/{id}/tasks", projectId)
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("title", "Sem prazo", "priority", "LOW"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.deadline").exists());
+
+        mockMvc.perform(post("/api/projects/{id}/tasks", projectId)
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("title", "Prazo distante", "priority", "LOW",
+                                "deadline", LocalDate.now().plusYears(1).plusDays(1).toString()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.deadline").exists());
+
+        // o relatorio e cacheado, mas cada escrita de tarefa invalida o projeto
+        mockMvc.perform(get("/api/projects/{id}/report", projectId).header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.byStatus.IN_PROGRESS").value(6));
     }
 
     @Test
@@ -140,6 +177,7 @@ class TaskFlowIntegrationTest {
         body.put("title", title);
         body.put("description", "Descricao de " + title);
         body.put("priority", priority);
+        body.put("deadline", LocalDate.now().plusDays(30).toString());
         body.put("assigneeId", assigneeId);
 
         MvcResult result = mockMvc.perform(post("/api/projects/{id}/tasks", projectId)
@@ -149,6 +187,20 @@ class TaskFlowIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         return Long.parseLong(readField(result, "id"));
+    }
+
+    private ResultActions updateTask(String token, long projectId, long taskId, String title,
+                                     String priority, Long assigneeId) throws Exception {
+        var body = new HashMap<String, Object>();
+        body.put("title", title);
+        body.put("priority", priority);
+        body.put("deadline", LocalDate.now().plusDays(30).toString());
+        body.put("assigneeId", assigneeId);
+
+        return mockMvc.perform(put("/api/projects/{id}/tasks/{taskId}", projectId, taskId)
+                .header("Authorization", bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(body)));
     }
 
     private ResultActions changeStatus(String token, long taskId, String status) throws Exception {
