@@ -1,0 +1,27 @@
+<mat-card class="report">
+  <mat-card-content>
+    <div class="report-group">
+      <h4>Por status</h4>
+      <div class="report-counters">
+        @for (counter of statusCounters(); track counter.key) {
+          <div class="report-counter">
+            <span class="report-total">{{ counter.total }}</span>
+            <span class="report-label">{{ counter.label }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="report-group">
+      <h4>Por prioridade</h4>
+      <div class="report-counters">
+        @for (counter of priorityCounters(); track counter.key) {
+          <div class="report-counter">
+            <span class="report-total priority-{{ counter.key }}">{{ counter.total }}</span>
+            <span class="report-label">{{ counter.label }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

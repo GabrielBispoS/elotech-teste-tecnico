@@ -54,6 +54,20 @@ export interface TaskPayload {
   assigneeId: number | null;
 }
 
+export interface TaskAuditLog {
+  id: number;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: UserSummary | null;
+  changedAt: string;
+}
+
+export interface ProjectReport {
+  byStatus: Record<TaskStatus, number>;
+  byPriority: Record<TaskPriority, number>;
+}
+
 /** Criterios aceitos pela API em ?sort=; vazio mantem a ordem padrao (mais recentes). */
 export type TaskSort = '' | 'priority,desc' | 'createdAt,desc' | 'deadline,asc';
 

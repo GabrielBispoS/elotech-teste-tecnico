@@ -33,6 +33,10 @@
     </button>
   </div>
 
+  @if (report(); as summary) {
+    <app-project-report [report]="summary" />
+  }
+
   <app-task-filters [members]="project()?.members ?? []" (queryChange)="applyQuery($event)" />
 
   <div class="board" cdkDropListGroup>

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { Page, Task, TaskPayload, TaskQuery, TaskStatus } from './models';
+import { Page, Task, TaskAuditLog, TaskPayload, TaskQuery, TaskStatus } from './models';
 
 const BOARD_PAGE_SIZE = 200;
 
@@ -31,6 +31,10 @@ export class TaskService {
 
   remove(projectId: number, taskId: number): Observable<void> {
     return this.http.delete<void>(`/api/projects/${projectId}/tasks/${taskId}`);
+  }
+
+  auditLog(projectId: number, taskId: number): Observable<TaskAuditLog[]> {
+    return this.http.get<TaskAuditLog[]>(`/api/projects/${projectId}/tasks/${taskId}/audit`);
   }
 
   changeStatus(taskId: number, status: TaskStatus): Observable<Task> {

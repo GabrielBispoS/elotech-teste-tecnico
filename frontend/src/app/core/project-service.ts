@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { Member, Project, ProjectDetail, ProjectRole } from './models';
+import { Member, Project, ProjectDetail, ProjectReport, ProjectRole } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
@@ -26,6 +26,10 @@ export class ProjectService {
 
   remove(projectId: number): Observable<void> {
     return this.http.delete<void>(`/api/projects/${projectId}`);
+  }
+
+  report(projectId: number): Observable<ProjectReport> {
+    return this.http.get<ProjectReport>(`/api/projects/${projectId}/report`);
   }
 
   addMember(projectId: number, email: string, role: ProjectRole): Observable<Member> {

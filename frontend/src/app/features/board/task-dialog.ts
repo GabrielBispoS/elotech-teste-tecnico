@@ -1,18 +1,30 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 
-import { Member, Task, TaskPayload, TaskPriority } from '../../core/models';
+import { Member, Task, TaskAuditLog, TaskPayload, TaskPriority } from '../../core/models';
+import { TaskService } from '../../core/task-service';
 
 export interface TaskDialogData {
+  projectId: number;
   task: Task | null;
   members: Member[];
 }
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  title: 'Titulo',
+  description: 'Descricao',
+  status: 'Status',
+  priority: 'Prioridade',
+  deadline: 'Prazo',
+  assignee: 'Responsavel',
+};
 
 export type TaskDialogResult = { action: 'save'; payload: TaskPayload } | { action: 'delete' };
 
@@ -58,20 +70,23 @@ function deadlineWindow(min: string, max: string): ValidatorFn {
     ReactiveFormsModule,
     MatButtonModule,
     MatDialogModule,
+    MatDividerModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
   ],
   templateUrl: './task-dialog.html',
 })
-export class TaskDialog {
+export class TaskDialog implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly dialogRef = inject(MatDialogRef<TaskDialog, TaskDialogResult>);
+  private readonly taskService = inject(TaskService);
 
   protected readonly data = inject<TaskDialogData>(MAT_DIALOG_DATA);
   protected readonly priorities: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
   protected readonly isEditing = this.data.task !== null;
 
+  protected readonly auditLog = signal<TaskAuditLog[]>([]);
   protected readonly minDeadline = toIsoDate(new Date());
   protected readonly maxDeadline = toIsoDate(addYears(new Date(), MAX_DEADLINE_YEARS));
 
@@ -85,6 +100,22 @@ export class TaskDialog {
     ],
     assigneeId: [this.data.task?.assignee?.id ?? (null as number | null)],
   });
+
+  ngOnInit(): void {
+    const task = this.data.task;
+    if (!task) {
+      return;
+    }
+    // historico so existe para tarefa ja salva; falha aqui nao impede a edicao
+    this.taskService.auditLog(this.data.projectId, task.id).subscribe({
+      next: (entries) => this.auditLog.set(entries),
+      error: () => this.auditLog.set([]),
+    });
+  }
+
+  protected fieldLabel(field: string): string {
+    return AUDIT_FIELD_LABELS[field] ?? field;
+  }
 
   protected submit(): void {
     if (this.form.invalid) {

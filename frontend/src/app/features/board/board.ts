@@ -14,6 +14,7 @@ import { describeError } from '../../core/http-error';
 import {
   EMPTY_TASK_QUERY,
   ProjectDetail,
+  ProjectReport as Report,
   Task,
   TaskPayload,
   TaskQuery,
@@ -21,9 +22,10 @@ import {
 } from '../../core/models';
 import { ProjectService } from '../../core/project-service';
 import { TaskService } from '../../core/task-service';
-import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { Toolbar } from '../../shared/toolbar/toolbar';
+import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { MemberDialog } from './member-dialog';
+import { ProjectReport } from './project-report';
 import { TaskFilters } from './task-filters';
 import { TaskDialog, TaskDialogResult } from './task-dialog';
 
@@ -39,6 +41,7 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
     RouterLink,
     DragDropModule,
     Toolbar,
+    ProjectReport,
     TaskFilters,
     MatButtonModule,
     MatCardModule,
@@ -62,6 +65,7 @@ export class Board implements OnInit {
   protected readonly columns = COLUMNS;
   protected readonly project = signal<ProjectDetail | null>(null);
   protected readonly tasks = signal<Task[]>([]);
+  protected readonly report = signal<Report | null>(null);
   protected readonly loading = signal(false);
   private query: TaskQuery = EMPTY_TASK_QUERY;
 
@@ -70,6 +74,7 @@ export class Board implements OnInit {
   ngOnInit(): void {
     this.loadProject();
     this.loadTasks();
+    this.loadReport();
   }
 
   protected applyQuery(query: TaskQuery): void {
@@ -91,7 +96,10 @@ export class Board implements OnInit {
     this.applyStatus(task.id, target);
 
     this.taskService.changeStatus(task.id, target).subscribe({
-      next: (updated) => this.replaceTask(updated),
+      next: (updated) => {
+        this.replaceTask(updated);
+        this.loadReport();
+      },
       error: (error) => {
         // rollback: o backend recusou a transicao (regra de estado, WIP limit ou trava de CRITICAL)
         this.applyStatus(task.id, previousStatus);
@@ -104,7 +112,10 @@ export class Board implements OnInit {
 
   protected openTaskDialog(task: Task | null): void {
     this.dialog
-      .open(TaskDialog, { width: '480px', data: { task, members: this.project()?.members ?? [] } })
+      .open(TaskDialog, {
+        width: '480px',
+        data: { projectId: this.projectId(), task, members: this.project()?.members ?? [] },
+      })
       .afterClosed()
       .subscribe((result?: TaskDialogResult) => {
         if (!result) {
@@ -148,6 +159,7 @@ export class Board implements OnInit {
         this.notifyIfAssignedToMe(saved, task?.assignee?.id ?? null);
         // a tarefa salva pode nao casar com o filtro atual, entao a lista vem do servidor
         this.loadTasks();
+        this.loadReport();
       },
       error: (error) =>
         this.snackBar.open(describeError(error, 'Nao foi possivel salvar a tarefa.'), 'Fechar', {
@@ -168,13 +180,23 @@ export class Board implements OnInit {
           return;
         }
         this.taskService.remove(this.projectId(), task.id).subscribe({
-          next: () => this.tasks.update((current) => current.filter((item) => item.id !== task.id)),
+          next: () => {
+            this.tasks.update((current) => current.filter((item) => item.id !== task.id));
+            this.loadReport();
+          },
           error: (error) =>
             this.snackBar.open(describeError(error, 'Nao foi possivel excluir a tarefa.'), 'Fechar', {
               duration: 5000,
             }),
         });
       });
+  }
+
+  private loadReport(): void {
+    this.projectService.report(this.projectId()).subscribe({
+      next: (report) => this.report.set(report),
+      error: () => this.report.set(null),
+    });
   }
 
   /** Avisa o usuario logado quando a tarefa passa a ser dele. */

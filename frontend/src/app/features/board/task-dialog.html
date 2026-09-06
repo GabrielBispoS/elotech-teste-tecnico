@@ -47,6 +47,22 @@
     </mat-form-field>
   </form>
 
+  @if (isEditing && auditLog().length > 0) {
+    <mat-divider />
+    <section class="audit">
+      <h4>Historico de alteracoes</h4>
+      @for (entry of auditLog(); track entry.id) {
+        <p class="audit-entry">
+          <strong>{{ fieldLabel(entry.field) }}</strong>
+          {{ entry.oldValue || 'vazio' }} &rarr; {{ entry.newValue || 'vazio' }}
+          <span class="audit-meta">
+            {{ entry.changedBy?.name || 'desconhecido' }} &middot;
+            {{ entry.changedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </span>
+        </p>
+      }
+    </section>
+  }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
