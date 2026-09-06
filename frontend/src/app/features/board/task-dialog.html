@@ -23,7 +23,17 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Prazo</mat-label>
-      <input matInput type="date" formControlName="deadline" />
+      <input matInput type="date" formControlName="deadline" [min]="minDeadline" [max]="maxDeadline" />
+      <mat-hint>Ate {{ maxDeadline | date: 'dd/MM/yyyy' }}</mat-hint>
+      @if (form.controls.deadline.hasError('required')) {
+        <mat-error>Informe o prazo.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineFormat')) {
+        <mat-error>Use um ano com 4 digitos.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineTooEarly')) {
+        <mat-error>O prazo nao pode ser anterior a hoje.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineTooLate')) {
+        <mat-error>O prazo deve ser no maximo {{ maxDeadline | date: 'dd/MM/yyyy' }}.</mat-error>
+      }
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -36,6 +46,7 @@
       </mat-select>
     </mat-form-field>
   </form>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
