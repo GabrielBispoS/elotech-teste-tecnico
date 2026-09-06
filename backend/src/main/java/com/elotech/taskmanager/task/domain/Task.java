@@ -56,6 +56,10 @@ public class Task {
     @Column(nullable = false, length = 20)
     private TaskPriority priority;
 
+    /** Coluna derivada de priority no banco; existe apenas para ordenar na ordem semantica. */
+    @Column(name = "priority_rank", insertable = false, updatable = false)
+    private Short priorityRank;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

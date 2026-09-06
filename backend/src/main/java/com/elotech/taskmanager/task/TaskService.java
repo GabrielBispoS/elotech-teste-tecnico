@@ -47,7 +47,8 @@ public class TaskService {
                                                     Long actorId) {
         accessService.requireMember(projectId, actorId);
         return PageResponse.from(
-                taskRepository.findAll(TaskSpecifications.build(projectId, filter), pageable),
+                taskRepository.findAll(TaskSpecifications.build(projectId, filter),
+                        TaskSortMapper.resolve(pageable)),
                 TaskResponse::from);
     }
 
