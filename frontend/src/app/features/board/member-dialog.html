@@ -1,7 +1,27 @@
-<h2 mat-dialog-title>Adicionar membro</h2>
+<h2 mat-dialog-title>Membros do projeto</h2>
 
 <mat-dialog-content>
-  <form [formGroup]="form" class="dialog-form">
+  <mat-list class="member-list">
+    @for (member of members(); track member.userId) {
+      <mat-list-item>
+        <span matListItemTitle>{{ member.name }}</span>
+        <span matListItemLine>{{ member.email }} &middot; {{ member.role }}</span>
+        <button
+          mat-icon-button
+          matListItemMeta
+          type="button"
+          aria-label="Remover membro"
+          [disabled]="isOwner(member)"
+          [title]="isOwner(member) ? 'O dono do projeto nao pode ser removido' : 'Remover membro'"
+          (click)="remove(member)"
+        >
+          <mat-icon>person_remove</mat-icon>
+        </button>
+      </mat-list-item>
+    }
+  </mat-list>
+
+  <form [formGroup]="form" class="member-form">
     <mat-form-field appearance="outline">
       <mat-label>E-mail</mat-label>
       <input matInput type="email" formControlName="email" />
@@ -15,12 +35,13 @@
         }
       </mat-select>
     </mat-form-field>
+
+    <button mat-flat-button color="primary" type="button" [disabled]="form.invalid" (click)="add()">
+      Adicionar
+    </button>
   </form>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button type="button" mat-dialog-close>Cancelar</button>
-  <button mat-flat-button color="primary" type="button" [disabled]="form.invalid" (click)="submit()">
-    Adicionar
-  </button>
+  <button mat-button type="button" (click)="close()">Fechar</button>
 </mat-dialog-actions>

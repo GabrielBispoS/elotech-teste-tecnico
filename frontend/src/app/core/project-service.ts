@@ -20,7 +20,19 @@ export class ProjectService {
     return this.http.post<Project>('/api/projects', { name, description });
   }
 
+  update(projectId: number, name: string, description: string | null): Observable<Project> {
+    return this.http.put<Project>(`/api/projects/${projectId}`, { name, description });
+  }
+
+  remove(projectId: number): Observable<void> {
+    return this.http.delete<void>(`/api/projects/${projectId}`);
+  }
+
   addMember(projectId: number, email: string, role: ProjectRole): Observable<Member> {
     return this.http.post<Member>(`/api/projects/${projectId}/members`, { email, role });
+  }
+
+  removeMember(projectId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`/api/projects/${projectId}/members/${userId}`);
   }
 }

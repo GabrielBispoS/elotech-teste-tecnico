@@ -14,6 +14,7 @@ import { describeError } from '../../core/http-error';
 import { ProjectDetail, Task, TaskPayload, TaskStatus } from '../../core/models';
 import { ProjectService } from '../../core/project-service';
 import { TaskService } from '../../core/task-service';
+import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { Toolbar } from '../../shared/toolbar/toolbar';
 import { MemberDialog } from './member-dialog';
 import { TaskDialog, TaskDialogResult } from './task-dialog';
@@ -105,23 +106,20 @@ export class Board implements OnInit {
   }
 
   protected openMemberDialog(): void {
+    const current = this.project();
+    if (!current) {
+      return;
+    }
     this.dialog
-      .open(MemberDialog, { width: '420px' })
+      .open(MemberDialog, {
+        width: '520px',
+        data: { projectId: current.id, members: current.members, ownerId: current.ownerId },
+      })
       .afterClosed()
-      .subscribe((result?: { email: string; role: 'ADMIN' | 'MEMBER' }) => {
-        if (!result) {
-          return;
+      .subscribe((changed?: boolean) => {
+        if (changed) {
+          this.loadProject();
         }
-        this.projectService.addMember(this.projectId(), result.email, result.role).subscribe({
-          next: () => {
-            this.loadProject();
-            this.snackBar.open('Membro adicionado.', 'Fechar', { duration: 3000 });
-          },
-          error: (error) =>
-            this.snackBar.open(describeError(error, 'Nao foi possivel adicionar o membro.'), 'Fechar', {
-              duration: 5000,
-            }),
-        });
       });
   }
 
@@ -147,13 +145,24 @@ export class Board implements OnInit {
   }
 
   private deleteTask(task: Task): void {
-    this.taskService.remove(this.projectId(), task.id).subscribe({
-      next: () => this.tasks.update((current) => current.filter((item) => item.id !== task.id)),
-      error: (error) =>
-        this.snackBar.open(describeError(error, 'Nao foi possivel excluir a tarefa.'), 'Fechar', {
-          duration: 5000,
-        }),
-    });
+    this.dialog
+      .open(ConfirmDialog, {
+        width: '420px',
+        data: { title: 'Excluir tarefa', message: `A tarefa "${task.title}" sera excluida.` },
+      })
+      .afterClosed()
+      .subscribe((confirmed?: boolean) => {
+        if (!confirmed) {
+          return;
+        }
+        this.taskService.remove(this.projectId(), task.id).subscribe({
+          next: () => this.tasks.update((current) => current.filter((item) => item.id !== task.id)),
+          error: (error) =>
+            this.snackBar.open(describeError(error, 'Nao foi possivel excluir a tarefa.'), 'Fechar', {
+              duration: 5000,
+            }),
+        });
+      });
   }
 
   /** Avisa o usuario logado quando a tarefa passa a ser dele. */

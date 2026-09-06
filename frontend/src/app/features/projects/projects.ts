@@ -9,7 +9,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 
 import { ProjectService } from '../../core/project-service';
+import { describeError } from '../../core/http-error';
 import { Project } from '../../core/models';
+import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { Toolbar } from '../../shared/toolbar/toolbar';
 import { ProjectDialog } from './project-dialog';
 
@@ -40,17 +42,51 @@ export class Projects implements OnInit {
     this.load();
   }
 
-  protected openCreateDialog(): void {
+  protected openProjectDialog(project: Project | null): void {
     this.dialog
-      .open(ProjectDialog, { width: '420px' })
+      .open(ProjectDialog, { width: '420px', data: { project } })
       .afterClosed()
       .subscribe((result?: { name: string; description: string | null }) => {
         if (!result) {
           return;
         }
-        this.projectService.create(result.name, result.description).subscribe({
-          next: (project) => this.projects.update((current) => [...current, project]),
-          error: () => this.snackBar.open('Nao foi possivel criar o projeto.', 'Fechar', { duration: 4000 }),
+        const request = project
+          ? this.projectService.update(project.id, result.name, result.description)
+          : this.projectService.create(result.name, result.description);
+
+        request.subscribe({
+          next: (saved) =>
+            this.projects.update((current) =>
+              project ? current.map((item) => (item.id === saved.id ? saved : item)) : [...current, saved],
+            ),
+          error: (error) =>
+            this.snackBar.open(describeError(error, 'Nao foi possivel salvar o projeto.'), 'Fechar', {
+              duration: 5000,
+            }),
+        });
+      });
+  }
+
+  protected confirmDelete(project: Project): void {
+    this.dialog
+      .open(ConfirmDialog, {
+        width: '420px',
+        data: {
+          title: 'Excluir projeto',
+          message: `O projeto "${project.name}" e todas as suas tarefas serao excluidos.`,
+        },
+      })
+      .afterClosed()
+      .subscribe((confirmed?: boolean) => {
+        if (!confirmed) {
+          return;
+        }
+        this.projectService.remove(project.id).subscribe({
+          next: () => this.projects.update((current) => current.filter((item) => item.id !== project.id)),
+          error: (error) =>
+            this.snackBar.open(describeError(error, 'Nao foi possivel excluir o projeto.'), 'Fechar', {
+              duration: 5000,
+            }),
         });
       });
   }
