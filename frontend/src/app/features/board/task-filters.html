@@ -1,0 +1,61 @@
+<form [formGroup]="form" class="filters">
+  <mat-form-field appearance="outline" class="filters-search">
+    <mat-label>Buscar</mat-label>
+    <input matInput formControlName="search" placeholder="Titulo ou descricao" />
+    <mat-icon matSuffix>search</mat-icon>
+    @if (searching) {
+      <mat-hint>A busca textual ignora os demais filtros.</mat-hint>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Status</mat-label>
+    <mat-select formControlName="status">
+      <mat-option [value]="null">Todos</mat-option>
+      @for (status of statuses; track status.value) {
+        <mat-option [value]="status.value">{{ status.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Prioridade</mat-label>
+    <mat-select formControlName="priority">
+      <mat-option [value]="null">Todas</mat-option>
+      @for (priority of priorities; track priority) {
+        <mat-option [value]="priority">{{ priority }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Responsavel</mat-label>
+    <mat-select formControlName="assigneeId">
+      <mat-option [value]="null">Todos</mat-option>
+      @for (member of members(); track member.userId) {
+        <mat-option [value]="member.userId">{{ member.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Prazo de</mat-label>
+    <input matInput type="date" formControlName="from" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Prazo ate</mat-label>
+    <input matInput type="date" formControlName="to" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Ordenar por</mat-label>
+    <mat-select formControlName="sort">
+      @for (sort of sorts; track sort.value) {
+        <mat-option [value]="sort.value">{{ sort.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <button mat-stroked-button type="button" (click)="clear()">Limpar</button>
+</form>

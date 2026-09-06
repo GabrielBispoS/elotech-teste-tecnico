@@ -1,0 +1,18 @@
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-title {
+  font-size: 18px;
+}
+
+.toolbar-user {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .toolbar-user {
+    display: none;
+  }
+}

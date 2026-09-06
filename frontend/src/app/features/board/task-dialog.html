@@ -1,0 +1,76 @@
+<h2 mat-dialog-title>{{ isEditing ? 'Editar tarefa' : 'Nova tarefa' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="dialog-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Titulo</mat-label>
+      <input matInput formControlName="title" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descricao</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Prioridade</mat-label>
+      <mat-select formControlName="priority">
+        @for (priority of priorities; track priority) {
+          <mat-option [value]="priority">{{ priority }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Prazo</mat-label>
+      <input matInput type="date" formControlName="deadline" [min]="minDeadline" [max]="maxDeadline" />
+      <mat-hint>Ate {{ maxDeadline | date: 'dd/MM/yyyy' }}</mat-hint>
+      @if (form.controls.deadline.hasError('required')) {
+        <mat-error>Informe o prazo.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineFormat')) {
+        <mat-error>Use um ano com 4 digitos.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineTooEarly')) {
+        <mat-error>O prazo nao pode ser anterior a hoje.</mat-error>
+      } @else if (form.controls.deadline.hasError('deadlineTooLate')) {
+        <mat-error>O prazo deve ser no maximo {{ maxDeadline | date: 'dd/MM/yyyy' }}.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Responsavel</mat-label>
+      <mat-select formControlName="assigneeId">
+        <mat-option [value]="null">Sem responsavel</mat-option>
+        @for (member of data.members; track member.userId) {
+          <mat-option [value]="member.userId">{{ member.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </form>
+
+  @if (isEditing && auditLog().length > 0) {
+    <mat-divider />
+    <section class="audit">
+      <h4>Historico de alteracoes</h4>
+      @for (entry of auditLog(); track entry.id) {
+        <p class="audit-entry">
+          <strong>{{ fieldLabel(entry.field) }}</strong>
+          {{ entry.oldValue || 'vazio' }} &rarr; {{ entry.newValue || 'vazio' }}
+          <span class="audit-meta">
+            {{ entry.changedBy?.name || 'desconhecido' }} &middot;
+            {{ entry.changedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </span>
+        </p>
+      }
+    </section>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (isEditing) {
+    <button mat-button color="warn" type="button" (click)="remove()">Excluir</button>
+  }
+  <button mat-button type="button" mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="primary" type="button" [disabled]="form.invalid" (click)="submit()">
+    Salvar
+  </button>
+</mat-dialog-actions>

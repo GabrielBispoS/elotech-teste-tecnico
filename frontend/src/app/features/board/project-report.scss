@@ -1,0 +1,48 @@
+.report {
+  margin-top: 16px;
+}
+
+.report mat-card-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+.report-group h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.report-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.report-counter {
+  display: flex;
+  flex-direction: column;
+  min-width: 84px;
+}
+
+.report-total {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.report-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.report-total.priority-CRITICAL {
+  color: #b3261e;
+}
+
+.report-total.priority-HIGH {
+  color: #b26a00;
+}

@@ -1,0 +1,21 @@
+.member-list {
+  padding: 0;
+}
+
+.member-form {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  align-items: start;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.member-form button {
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .member-form {
+    grid-template-columns: 1fr;
+  }
+}
