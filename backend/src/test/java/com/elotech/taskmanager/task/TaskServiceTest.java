@@ -48,6 +48,8 @@ class TaskServiceTest {
     @Mock
     private ProjectAccessService accessService;
     @Mock
+    private ProjectReportCache reportCache;
+    @Mock
     private ProjectMembershipRepository membershipRepository;
     @Mock
     private UserRepository userRepository;
@@ -147,6 +149,16 @@ class TaskServiceTest {
 
         assertThat(task.getTitle()).isEqualTo("Titulo novo");
         verify(taskRepository, never()).countByAssigneeIdAndStatus(anyLong(), any());
+    }
+
+    @Test
+    void invalidaORelatorioDoProjetoAoAlterarOStatusDaTarefa() {
+        givenTask(TaskStatus.TODO, TaskPriority.LOW, null);
+        givenActorRole(ProjectRole.MEMBER);
+
+        taskService.changeStatus(TASK_ID, new TaskStatusUpdateRequest(TaskStatus.IN_PROGRESS), ACTOR_ID);
+
+        verify(reportCache).invalidate(PROJECT_ID);
     }
 
     @Test

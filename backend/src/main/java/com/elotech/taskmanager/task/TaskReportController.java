@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Relatorios")
 public class TaskReportController {
 
-    private final TaskService taskService;
+    private final TaskReportService reportService;
 
     @Operation(summary = "Resumo do projeto agregado por status e por prioridade")
     @GetMapping
     public ProjectReportResponse report(@PathVariable Long projectId,
                                         @AuthenticationPrincipal AuthenticatedUser actor) {
-        return taskService.report(projectId, actor.id());
+        return reportService.report(projectId, actor.id());
     }
 }
