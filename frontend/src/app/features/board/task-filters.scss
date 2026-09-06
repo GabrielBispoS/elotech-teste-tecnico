@@ -1,0 +1,21 @@
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.filters-search {
+  grid-column: span 2;
+}
+
+.filters button {
+  margin-top: 8px;
+}
+
+@media (max-width: 700px) {
+  .filters-search {
+    grid-column: auto;
+  }
+}

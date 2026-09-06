@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { Page, Task, TaskPayload, TaskStatus } from './models';
+import { Page, Task, TaskPayload, TaskQuery, TaskStatus } from './models';
 
 const BOARD_PAGE_SIZE = 200;
 
@@ -10,10 +10,15 @@ const BOARD_PAGE_SIZE = 200;
 export class TaskService {
   private readonly http = inject(HttpClient);
 
-  listByProject(projectId: number): Observable<Task[]> {
-    return this.http
-      .get<Page<Task>>(`/api/projects/${projectId}/tasks`, { params: { size: BOARD_PAGE_SIZE } })
-      .pipe(map((page) => page.content));
+  /**
+   * Busca textual e filtros sao endpoints distintos na API: com termo informado o board consulta
+   * /tasks/search, sem termo usa a listagem com filtros, ordenacao e paginacao.
+   */
+  listByProject(projectId: number, query: TaskQuery): Observable<Task[]> {
+    const term = query.search.trim();
+    return term
+      ? this.fetchPage(`/api/projects/${projectId}/tasks/search`, new HttpParams().set('q', term))
+      : this.fetchPage(`/api/projects/${projectId}/tasks`, toHttpParams(query));
   }
 
   create(projectId: number, payload: TaskPayload): Observable<Task> {
@@ -31,4 +36,26 @@ export class TaskService {
   changeStatus(taskId: number, status: TaskStatus): Observable<Task> {
     return this.http.patch<Task>(`/api/tasks/${taskId}/status`, { status });
   }
+
+  private fetchPage(url: string, params: HttpParams): Observable<Task[]> {
+    return this.http
+      .get<Page<Task>>(url, { params: params.set('size', BOARD_PAGE_SIZE) })
+      .pipe(map((page) => page.content));
+  }
+}
+
+function toHttpParams(query: TaskQuery): HttpParams {
+  const values: Record<string, string | number | null> = {
+    status: query.status,
+    priority: query.priority,
+    assignee: query.assigneeId,
+    from: query.from,
+    to: query.to,
+    sort: query.sort || null,
+  };
+
+  return Object.entries(values).reduce(
+    (params, [key, value]) => (value === null || value === '' ? params : params.set(key, value)),
+    new HttpParams(),
+  );
 }

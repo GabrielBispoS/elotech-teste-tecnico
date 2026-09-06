@@ -33,6 +33,8 @@
     </button>
   </div>
 
+  <app-task-filters [members]="project()?.members ?? []" (queryChange)="applyQuery($event)" />
+
   <div class="board" cdkDropListGroup>
     @for (column of columns; track column.status) {
       <section class="board-column">

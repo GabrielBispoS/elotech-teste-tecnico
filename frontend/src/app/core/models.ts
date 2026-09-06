@@ -54,6 +54,29 @@ export interface TaskPayload {
   assigneeId: number | null;
 }
 
+/** Criterios aceitos pela API em ?sort=; vazio mantem a ordem padrao (mais recentes). */
+export type TaskSort = '' | 'priority,desc' | 'createdAt,desc' | 'deadline,asc';
+
+export interface TaskQuery {
+  search: string;
+  status: TaskStatus | null;
+  priority: TaskPriority | null;
+  assigneeId: number | null;
+  from: string | null;
+  to: string | null;
+  sort: TaskSort;
+}
+
+export const EMPTY_TASK_QUERY: TaskQuery = {
+  search: '',
+  status: null,
+  priority: null,
+  assigneeId: null,
+  from: null,
+  to: null,
+  sort: '',
+};
+
 export interface Page<T> {
   content: T[];
   page: number;

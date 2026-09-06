@@ -11,12 +11,20 @@ import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth-service';
 import { describeError } from '../../core/http-error';
-import { ProjectDetail, Task, TaskPayload, TaskStatus } from '../../core/models';
+import {
+  EMPTY_TASK_QUERY,
+  ProjectDetail,
+  Task,
+  TaskPayload,
+  TaskQuery,
+  TaskStatus,
+} from '../../core/models';
 import { ProjectService } from '../../core/project-service';
 import { TaskService } from '../../core/task-service';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { Toolbar } from '../../shared/toolbar/toolbar';
 import { MemberDialog } from './member-dialog';
+import { TaskFilters } from './task-filters';
 import { TaskDialog, TaskDialogResult } from './task-dialog';
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
@@ -31,6 +39,7 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
     RouterLink,
     DragDropModule,
     Toolbar,
+    TaskFilters,
     MatButtonModule,
     MatCardModule,
     MatChipsModule,
@@ -54,11 +63,17 @@ export class Board implements OnInit {
   protected readonly project = signal<ProjectDetail | null>(null);
   protected readonly tasks = signal<Task[]>([]);
   protected readonly loading = signal(false);
+  private query: TaskQuery = EMPTY_TASK_QUERY;
 
   protected readonly isAdmin = computed(() => this.project()?.myRole === 'ADMIN');
 
   ngOnInit(): void {
     this.loadProject();
+    this.loadTasks();
+  }
+
+  protected applyQuery(query: TaskQuery): void {
+    this.query = query;
     this.loadTasks();
   }
 
@@ -130,12 +145,9 @@ export class Board implements OnInit {
 
     request.subscribe({
       next: (saved) => {
-        if (task) {
-          this.replaceTask(saved);
-        } else {
-          this.tasks.update((current) => [saved, ...current]);
-        }
         this.notifyIfAssignedToMe(saved, task?.assignee?.id ?? null);
+        // a tarefa salva pode nao casar com o filtro atual, entao a lista vem do servidor
+        this.loadTasks();
       },
       error: (error) =>
         this.snackBar.open(describeError(error, 'Nao foi possivel salvar a tarefa.'), 'Fechar', {
@@ -195,7 +207,7 @@ export class Board implements OnInit {
 
   private loadTasks(): void {
     this.loading.set(true);
-    this.taskService.listByProject(this.projectId()).subscribe({
+    this.taskService.listByProject(this.projectId(), this.query).subscribe({
       next: (tasks) => {
         this.tasks.set(tasks);
         this.loading.set(false);
