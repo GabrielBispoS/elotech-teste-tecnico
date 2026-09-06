@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 @Service
@@ -93,11 +94,17 @@ public class TaskService {
         Task task = findTaskInProject(projectId, taskId);
         TaskSnapshot before = TaskSnapshot.of(task);
 
+        User novoResponsavel = resolveAssignee(projectId, request.assigneeId());
+        // trocar o responsavel de uma tarefa em andamento consome uma vaga do WIP do novo responsavel
+        if (task.getStatus() == TaskStatus.IN_PROGRESS && !isMesmoResponsavel(task.getAssignee(), novoResponsavel)) {
+            requireWipCapacity(novoResponsavel);
+        }
+
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setPriority(request.priority());
         task.setDeadline(request.deadline());
-        task.setAssignee(resolveAssignee(projectId, request.assigneeId()));
+        task.setAssignee(novoResponsavel);
 
         auditService.recordChanges(task, actorId, before);
         return TaskResponse.from(task);
@@ -144,6 +151,12 @@ public class TaskService {
             throw new BusinessRuleException("Limite de %d tarefas em andamento atingido para %s"
                     .formatted(WIP_LIMIT, assignee.getName()));
         }
+    }
+
+    private boolean isMesmoResponsavel(User atual, User novo) {
+        Long atualId = atual == null ? null : atual.getId();
+        Long novoId = novo == null ? null : novo.getId();
+        return Objects.equals(atualId, novoId);
     }
 
     private Task findTaskInProject(Long projectId, Long taskId) {

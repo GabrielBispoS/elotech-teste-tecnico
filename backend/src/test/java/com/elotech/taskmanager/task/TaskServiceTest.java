@@ -125,6 +125,31 @@ class TaskServiceTest {
     }
 
     @Test
+    void bloqueiaTrocaDeResponsavelQuandoNovoResponsavelJaAtingiuOLimiteDeWip() {
+        Task task = givenTask(TaskStatus.IN_PROGRESS, TaskPriority.MEDIUM, assignee);
+        User outro = givenMembro(20L);
+        when(taskRepository.countByAssigneeIdAndStatus(outro.getId(), TaskStatus.IN_PROGRESS)).thenReturn(5L);
+
+        assertThatThrownBy(() -> taskService.update(PROJECT_ID, TASK_ID,
+                new TaskRequest("Tarefa", null, TaskPriority.MEDIUM, null, outro.getId()), ACTOR_ID))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Limite de 5 tarefas");
+        assertThat(task.getAssignee()).isEqualTo(assignee);
+    }
+
+    @Test
+    void naoRevalidaWipQuandoOResponsavelDaTarefaEmAndamentoNaoMuda() {
+        Task task = givenTask(TaskStatus.IN_PROGRESS, TaskPriority.MEDIUM, assignee);
+        givenMembro(ACTOR_ID);
+
+        taskService.update(PROJECT_ID, TASK_ID,
+                new TaskRequest("Titulo novo", null, TaskPriority.HIGH, null, ACTOR_ID), ACTOR_ID);
+
+        assertThat(task.getTitle()).isEqualTo("Titulo novo");
+        verify(taskRepository, never()).countByAssigneeIdAndStatus(anyLong(), any());
+    }
+
+    @Test
     void rejeitaResponsavelQueNaoEMembroDoProjeto() {
         when(membershipRepository.existsByProjectIdAndUserId(PROJECT_ID, 99L)).thenReturn(false);
 
@@ -140,6 +165,14 @@ class TaskServiceTest {
         task.setStatus(status);
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
         return task;
+    }
+
+    private User givenMembro(Long userId) {
+        User user = userId.equals(ACTOR_ID) ? assignee : new User("Bruno", "bruno@elotech.com", "hash");
+        user.setId(userId);
+        when(membershipRepository.existsByProjectIdAndUserId(PROJECT_ID, userId)).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        return user;
     }
 
     private void givenActorRole(ProjectRole role) {
